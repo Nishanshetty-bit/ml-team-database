@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: ml-team-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-team_database}
+      POSTGRES_USER: ${POSTGRES_USER:-team_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - ml_team_postgres_data:/var/lib/postgresql/data
+      - ./init/unified_ml_database.backup:/backups/unified_ml_database.backup:ro
+      - ./init/restore.sh:/docker-entrypoint-initdb.d/restore.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-team_admin} -d ${POSTGRES_DB:-team_database}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  ml_team_postgres_data:
