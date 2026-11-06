@@ -1,88 +1,90 @@
 # Unified ML Team PostgreSQL Database (ML-01 to ML-07)
 
-This repository packages the team's PostgreSQL database for repeatable local development.
-Each teammate runs their own local copy using Docker Compose. It is not a shared live
-database and does not expose anyone's laptop to the internet.
+## 1. Prerequisites
 
-## Current package status
+- Install Docker Desktop.
+- Install Git.
+- Start Docker Desktop.
 
-- Docker Compose configuration: included.
-- Environment template: included.
-- Database export script: included.
-- ML-01 database handoff notes: included.
-- **Verified database dump: must be exported from the current, audited database before
-  this repository is shared.** The older draft SQL is intentionally not substituted,
-  because the live database has been audited and the export must preserve its exact
-  tables, data, keys, and types.
-
-## 1. Export the current database (database owner's machine)
-
-Prerequisites: PostgreSQL client tools (`pg_dump`) installed and available in PATH.
-
-Open PowerShell in this repository folder and run:
+## 2. Clone the Repository
 
 ```powershell
-.\scripts\export-database.ps1 -SourceHost localhost -SourcePort 5432 -SourceDatabase team_database -SourceUser postgres
+git clone https://github.com/Nishanshetty-bit/ml-team-database.git
+cd ml-team-database
 ```
 
-Change the database name, port, or username to match the database shown in pgAdmin.
-Enter the source database password when prompted.
+## 3. Configure Environment
 
-This creates `init/01_database.sql`. Review that it contains the expected schemas and
-tables, then commit it to the team's private GitHub repository. Do not commit `.env`
-or personal passwords.
-
-## 2. Start a teammate's local database
-
-The teammate clones the repository and runs:
+Create `.env`:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set a private local password. Then run:
+Set your local credentials in `.env`:
+
+```env
+POSTGRES_DB=team_database
+POSTGRES_USER=team_admin
+POSTGRES_PASSWORD=your_own_password
+POSTGRES_PORT=5434
+```
+
+## 4. Start the Database
 
 ```powershell
 docker compose up -d
-docker compose ps
 ```
 
-PostgreSQL is available at:
+## 5. Check Database Status
 
-- Host: `localhost`
-- Port: `5433`
-- Database: `team_database`
-- Username: `team_admin`
-- Password: the value in `.env`
+```powershell
+docker compose ps
+docker compose logs postgres
+```
 
-The teammate's ML code should connect to this local database using those values.
-For Python, the connection URL format is:
+Wait for the database restoration to complete.
+
+## 6. Database Connection Details
+
+| Setting | Value |
+|---|---|
+| Host | `localhost` |
+| Port | `5434` |
+| Database | `team_database` |
+| Username | `team_admin` |
+| Password | Your `.env` password |
+
+## 7. Connect Your ML Model
+
+Use the above credentials to connect your model to PostgreSQL.
+
+Python connection URL:
 
 ```text
-postgresql://team_admin:<PASSWORD>@localhost:5433/team_database
+postgresql://team_admin:<PASSWORD>@localhost:5434/team_database
 ```
 
-Do not put the real password in source code or GitHub.
+## 8. ML-01 to ML-02 Handoff
 
-## 3. Verify
+- **ML-01 output:** `ml05.ml01_api_output`
+- **ML-02 input:** `ml02.ml01_eligibility_input`
 
-Open pgAdmin or run `scripts/check-database.sql` against the Docker database.
-The database dump is executed automatically only when the Docker volume is initialized
-for the first time.
+Refer to `docs/ML01-DATABASE-CONTRACT.md` for column details.
 
-## 4. Reset a local copy (destructive)
+## 9. Stop the Database
 
-To discard the local Docker database and re-import the committed dump:
+```powershell
+docker compose down
+```
+
+## 10. Reset the Database (Optional)
 
 ```powershell
 docker compose down -v
 docker compose up -d
 ```
 
-`down -v` permanently deletes that teammate's local Docker database volume. Use only
-when they intentionally want a clean rebuild.
+**Warning:** This permanently deletes the local Docker database volume.
 
-## 5. ML-01 handoff
-
-Read `docs/ML01-DATABASE-CONTRACT.md`. It documents the pair-level ML-01 output and the
-per-viewer ML-02 handoff. The ML-01 model code itself is owned by the ML-01 developer.
+**Important:** Never upload `.env` or personal passwords to GitHub.
